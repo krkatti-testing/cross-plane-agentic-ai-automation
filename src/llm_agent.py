@@ -60,6 +60,7 @@ class LLMAgent:
             model: Model to use (gpt-4, gpt-3.5-turbo, etc.)
         """
         openai.api_key = api_key
+        self.api_key = api_key
         self.model = model
         
     def parse_request(self, user_input: str) -> ResourceRequest:
