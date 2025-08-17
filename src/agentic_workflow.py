@@ -10,7 +10,7 @@ import argparse
 from typing import Optional, Dict, Any
 from pathlib import Path
 
-from llm_agent import LLMAgent, ResourceRequest, ResourceType
+from llm_agent import LLMAgent, ResourceRequest, ResourceType, LLMParsingError
 from enhanced_resource_generator import EnhancedCrossplaneResourceGenerator
 from github_integration import GitHubIntegration, GitHubAPIError
 
@@ -18,7 +18,7 @@ class CrossplaneAgenticWorkflow:
     """Main workflow orchestrator for automated infrastructure provisioning"""
     
     def __init__(self, openai_api_key: str, github_token: str, 
-                 repo_owner: str, repo_name: str, llm_model: str = "gpt-4"):
+                 repo_owner: str, repo_name: str, llm_model: str = "gpt-5"):
         """
         Initialize the agentic workflow
         
@@ -55,7 +55,11 @@ class CrossplaneAgenticWorkflow:
         try:
             # Step 1: Parse the request using LLM
             print("🧠 Step 1: Parsing request with LLM...")
-            request = self.llm_agent.parse_request(user_input)
+            try:
+                request = self.llm_agent.parse_request(user_input)
+            except LLMParsingError as e:
+                print(f"   ❌ LLM parsing failed: {e}")
+                return {"status": "error", "message": f"LLM parsing failed: {e}", "paused": True, "stage": "llm_parsing"}
             
             print(f"   ✅ Parsed as: {request.resource_type.value}")
             print(f"   📛 Name: {request.name}")
@@ -315,8 +319,8 @@ Examples:
                        help="GitHub repository name (or set GITHUB_REPO_NAME env var)")
     
     # Optional parameters
-    parser.add_argument("--llm-model", default="gpt-4",
-                       choices=["gpt-4", "gpt-3.5-turbo"],
+    parser.add_argument("--llm-model", default="gpt-5",
+                       choices=["gpt-5", "gpt-5-nano", "gpt-4", "gpt-3.5-turbo"],
                        help="LLM model to use")
     parser.add_argument("--no-pr", action="store_true",
                        help="Don't create GitHub PR automatically")

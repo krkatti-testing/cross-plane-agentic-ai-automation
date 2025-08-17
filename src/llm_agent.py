@@ -7,9 +7,14 @@ Parses natural language requests and generates appropriate infrastructure config
 import json
 import re
 import openai
+import requests
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from enum import Enum
+
+class LLMParsingError(Exception):
+    """Exception raised when LLM parsing fails"""
+    pass
 
 class ResourceType(Enum):
     EKS_CLUSTER = "eks_cluster"
@@ -46,7 +51,7 @@ class ResourceRequest:
 class LLMAgent:
     """LLM-powered agent for parsing infrastructure requests"""
     
-    def __init__(self, api_key: str, model: str = "gpt-4"):
+    def __init__(self, api_key: str, model: str = "gpt-5"):
         """
         Initialize the LLM agent
         
@@ -127,18 +132,132 @@ Response: {
 """
 
         try:
-            response = openai.ChatCompletion.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                temperature=0.1,
-                max_tokens=500
-            )
-            
-            # Extract JSON from response
-            content = response.choices[0].message.content.strip()
+            # Use HTTP path for GPT-5 family to support new params (max_completion_tokens)
+            if str(self.model).startswith("gpt-5"):
+                # Ultra-compact system prompt to minimize input tokens
+                compact_system_prompt = "Return JSON only."
+
+                def build_payload(max_tokens: int, use_schema: bool = True):
+                    payload = {
+                        "model": self.model,
+                        "messages": [
+                            {"role": "system", "content": compact_system_prompt},
+                            {"role": "user", "content": user_input}
+                        ],
+                        "max_completion_tokens": max_tokens
+                    }
+                    
+                    if use_schema:
+                        payload["response_format"] = {
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": "resource_request",
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": False,
+                                    "required": ["resource_type", "name"],
+                                    "properties": {
+                                        "resource_type": {
+                                            "type": "string",
+                                            "enum": ["eks_cluster", "s3_bucket", "rds_database", "vpc"]
+                                        },
+                                        "name": {"type": "string"},
+                                        "region": {"type": "string"},
+                                        "environment": {
+                                            "type": "string",
+                                            "enum": ["development", "staging", "production"]
+                                        },
+                                        "node_count": {"type": "integer"},
+                                        "kubernetes_version": {"type": "string"},
+                                        "instance_types": {"type": "array", "items": {"type": "string"}},
+                                        "versioning": {"type": "boolean"},
+                                        "encryption": {"type": "boolean"},
+                                        "engine": {"type": "string"},
+                                        "instance_class": {"type": "string"},
+                                        "allocated_storage": {"type": "integer"},
+                                        "tags": {"type": "object", "additionalProperties": {"type": "string"}},
+                                        "description": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    else:
+                        payload["response_format"] = {"type": "json_object"}
+                    
+                    return payload
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}"
+                }
+
+                # Progressive retry strategy: more tokens, then simpler format, then fallback model
+                attempts = [
+                    (512, True),   # 512 tokens with schema
+                    (1024, True),  # 1024 tokens with schema
+                    (1024, False), # 1024 tokens with simple json_object
+                ]
+                
+                content = ""
+                last_data = None
+                last_finish = None
+                
+                for max_tok, use_schema in attempts:
+                    try:
+                        payload = build_payload(max_tok, use_schema)
+                        resp = requests.post(
+                            "https://api.openai.com/v1/chat/completions",
+                            headers=headers,
+                            data=json.dumps(payload),
+                            timeout=60
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
+                        last_data = data
+                        
+                        # Print raw response for debugging
+                        schema_type = "schema" if use_schema else "json_object"
+                        print(f"🔄 LLM raw response (HTTP, {max_tok} tokens, {schema_type}):")
+                        try:
+                            print(json.dumps(data, indent=2, ensure_ascii=False))
+                        except Exception:
+                            print(f"Non-JSON response: {data}")
+                        
+                        content = data["choices"][0]["message"].get("content", "") or ""
+                        content = content.strip()
+                        last_finish = data["choices"][0].get("finish_reason")
+                        
+                        if content:
+                            break
+                            
+                    except Exception as e:
+                        print(f"⚠️ Attempt failed (tokens={max_tok}, schema={use_schema}): {e}")
+                        continue
+
+                # If still no content, try fallback to gpt-3.5-turbo
+                if not content:
+                    print("🔄 GPT-5 failed, falling back to gpt-3.5-turbo...")
+                    fallback_agent = LLMAgent(self.api_key, "gpt-3.5-turbo")
+                    return fallback_agent.parse_request(user_input)
+
+                if not content:
+                    raise LLMParsingError(
+                        f"LLM returned empty content after all attempts (finish_reason={last_finish})."
+                    )
+            else:
+                # Legacy SDK path for older models (e.g., gpt-3.5-turbo, gpt-4)
+                response = openai.ChatCompletion.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_input}
+                    ],
+                    temperature=0.1,
+                    max_tokens=500
+                )
+                
+                # Extract JSON from response
+                content = response.choices[0].message.content.strip()
             
             # Try to extract JSON if it's wrapped in markdown
             json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
@@ -147,7 +266,13 @@ Response: {
             elif content.startswith('```') and content.endswith('```'):
                 content = content[3:-3].strip()
             
-            parsed_data = json.loads(content)
+            if not content:
+                raise LLMParsingError("LLM returned empty content.")
+            
+            try:
+                parsed_data = json.loads(content)
+            except json.JSONDecodeError as e:
+                raise LLMParsingError(f"LLM output is not valid JSON: {e}") from e
             
             # Convert to ResourceRequest
             resource_type = ResourceType(parsed_data["resource_type"])
@@ -171,8 +296,11 @@ Response: {
             
             return request
             
+        except LLMParsingError as e:
+            # Don't fall back to regex for LLM parsing errors - raise them directly
+            raise e
         except Exception as e:
-            # Fallback: try to extract basic information using regex
+            # Fallback: try to extract basic information using regex for other errors
             print(f"⚠️  LLM parsing failed ({e}), falling back to regex parsing...")
             return self._fallback_parse(user_input)
     
