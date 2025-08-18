@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import json
 
-from llm_agent import ResourceRequest, ResourceType
+from .llm_agent import ResourceRequest, ResourceType
 
 class EnhancedCrossplaneResourceGenerator:
     """Enhanced generator that works with LLM-parsed requests"""

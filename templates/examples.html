@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Examples - Crossplane Agentic Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-lightbulb"></i> Request Examples
+    </h2>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        <i class="fas fa-keyboard"></i> Try It Now
+    </a>
+</div>
+
+<p class="lead text-muted mb-5">
+    Here are some example requests to help you get started. Click on any example to copy it to your clipboard.
+</p>
+
+<!-- EKS Cluster Examples -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fab fa-aws text-warning"></i> Amazon EKS Clusters
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Basic EKS Cluster</h6>
+                        <p class="card-text example-text">
+                            Create an EKS cluster named demo-cluster in us-west-2 with 3 nodes
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Basic setup with default configuration
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Production EKS Cluster</h6>
+                        <p class="card-text example-text">
+                            Create a production EKS cluster named prod-cluster in us-east-1 with 5 nodes using Kubernetes version 1.28
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Production environment with specific K8s version
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">High-Performance EKS</h6>
+                        <p class="card-text example-text">
+                            Create an EKS cluster named ml-cluster in us-west-2 with 8 nodes using m5.xlarge instances for machine learning workloads
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Custom instance types for specific workloads
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Development EKS</h6>
+                        <p class="card-text example-text">
+                            Set up a development EKS cluster called dev-cluster in us-east-2 with 2 nodes for testing
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Minimal setup for development environment
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- S3 Bucket Examples -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-database text-info"></i> Amazon S3 Buckets
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Basic S3 Bucket</h6>
+                        <p class="card-text example-text">
+                            Create an S3 bucket named my-data-bucket
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Simple bucket with default settings
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Secure S3 Bucket</h6>
+                        <p class="card-text example-text">
+                            Create an S3 bucket named secure-data with encryption and versioning enabled
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Enhanced security features
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Data Lake Bucket</h6>
+                        <p class="card-text example-text">
+                            Set up an S3 bucket called analytics-data-lake with versioning for storing analytics data
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Data lake configuration with versioning
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Backup Bucket</h6>
+                        <p class="card-text example-text">
+                            Create a backup S3 bucket named app-backups with encryption enabled for storing application backups
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Backup storage with encryption
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RDS Database Examples -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-server text-success"></i> Amazon RDS Databases
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">MySQL Database</h6>
+                        <p class="card-text example-text">
+                            Create a MySQL database named user-db with 20GB storage
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Standard MySQL setup
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">PostgreSQL Database</h6>
+                        <p class="card-text example-text">
+                            Set up a PostgreSQL database called analytics-db using db.t3.medium instance with 100GB storage
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> PostgreSQL with custom instance size
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Production Database</h6>
+                        <p class="card-text example-text">
+                            Create a production MySQL database named prod-app-db in us-east-1 with 50GB storage and db.m5.large instance
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Production-grade database configuration
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Development Database</h6>
+                        <p class="card-text example-text">
+                            Set up a development PostgreSQL database called dev-db with minimal resources for testing
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Lightweight setup for development
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VPC Examples -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-network-wired text-primary"></i> Amazon VPC Networks
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Basic VPC</h6>
+                        <p class="card-text example-text">
+                            Create a VPC named main-vpc in us-west-2
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Simple VPC setup
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card example-card" onclick="copyExample(this)">
+                    <div class="card-body">
+                        <h6 class="card-title">Production VPC</h6>
+                        <p class="card-text example-text">
+                            Set up a production VPC called prod-network in us-east-1 with multiple availability zones
+                        </p>
+                        <div class="example-details">
+                            <small class="text-muted">
+                                <i class="fas fa-tags"></i> Multi-AZ production network
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tips Section -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-info-circle"></i> Tips for Writing Requests
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-check text-success"></i> Good Practices</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-arrow-right text-muted"></i> Be specific about resource names</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> Mention the AWS region if needed</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> Specify environment (dev/staging/prod)</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> Include sizing requirements</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> Mention security features if needed</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-lightbulb text-warning"></i> Supported Features</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-arrow-right text-muted"></i> <strong>EKS:</strong> Node count, instance types, K8s version</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> <strong>S3:</strong> Versioning, encryption</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> <strong>RDS:</strong> Engine type, instance class, storage</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> <strong>VPC:</strong> Multi-AZ, custom CIDR</li>
+                    <li><i class="fas fa-arrow-right text-muted"></i> <strong>All:</strong> Tags, descriptions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyExample(element) {
+    const text = element.querySelector('.example-text').textContent.trim();
+    
+    navigator.clipboard.writeText(text).then(function() {
+        // Show success feedback
+        const card = element;
+        const originalClass = card.className;
+        card.classList.add('border-success', 'bg-light');
+        
+        // Add checkmark
+        const title = card.querySelector('.card-title');
+        const originalTitle = title.innerHTML;
+        title.innerHTML = '<i class="fas fa-check text-success"></i> Copied to Clipboard!';
+        
+        setTimeout(function() {
+            card.className = originalClass;
+            title.innerHTML = originalTitle;
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        alert('Failed to copy to clipboard. Please select and copy manually.');
+    });
+}
+
+// Add hover effect styling
+document.querySelectorAll('.example-card').forEach(function(card) {
+    card.style.cursor = 'pointer';
+    card.addEventListener('mouseenter', function() {
+        this.classList.add('shadow-sm');
+    });
+    card.addEventListener('mouseleave', function() {
+        this.classList.remove('shadow-sm');
+    });
+});
+</script>
+{% endblock %}

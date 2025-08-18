@@ -10,9 +10,9 @@ import argparse
 from typing import Optional, Dict, Any
 from pathlib import Path
 
-from llm_agent import LLMAgent, ResourceRequest, ResourceType, LLMParsingError
-from enhanced_resource_generator import EnhancedCrossplaneResourceGenerator
-from github_integration import GitHubIntegration, GitHubAPIError
+from .llm_agent import LLMAgent, ResourceRequest, ResourceType, LLMParsingError
+from .enhanced_resource_generator import EnhancedCrossplaneResourceGenerator
+from .github_integration import GitHubIntegration, GitHubAPIError
 
 class CrossplaneAgenticWorkflow:
     """Main workflow orchestrator for automated infrastructure provisioning"""
@@ -37,6 +37,33 @@ class CrossplaneAgenticWorkflow:
         print(f"   LLM Model: {llm_model}")
         print(f"   Repository: {repo_owner}/{repo_name}")
         print("=" * 60)
+    
+    def run_workflow(self, user_input: str, workflow_id: str = None) -> Dict[str, Any]:
+        """
+        Run the complete workflow with status tracking
+        
+        Args:
+            user_input: Natural language description of infrastructure needs
+            workflow_id: Optional workflow ID for tracking
+            
+        Returns:
+            Dictionary with processing results
+        """
+        return self.process_request(user_input, auto_create_pr=True)
+    
+    def _update_workflow_status(self, workflow_id: str, status: str, message: str, stage: str = None, paused: bool = False):
+        """
+        Update workflow status (placeholder for web integration)
+        
+        Args:
+            workflow_id: Workflow identifier
+            status: Current status
+            message: Status message
+            stage: Current stage
+            paused: Whether workflow is paused
+        """
+        # This is a placeholder - in the web app, this would update the global workflow_status dict
+        pass
     
     def process_request(self, user_input: str, auto_create_pr: bool = True) -> Dict[str, Any]:
         """

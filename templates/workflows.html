@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Workflows - Crossplane Agentic Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-tasks"></i> Workflow History
+    </h2>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Request
+    </a>
+</div>
+
+{% if workflows %}
+    <div class="row g-4">
+        {% for workflow_id, workflow in workflows.items() %}
+        <div class="col-lg-6">
+            <div class="card workflow-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ workflow.id[:8] }}...</strong>
+                        <small class="text-muted">
+                            {{ workflow.created_at[:19] if workflow.created_at else 'Unknown' }}
+                        </small>
+                    </div>
+                    <div>
+                        {% set status = workflow.status %}
+                        {% if status == 'queued' %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-clock"></i> Queued
+                            </span>
+                        {% elif status == 'running' %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-spinner fa-spin"></i> Running
+                            </span>
+                        {% elif status == 'completed' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> Completed
+                            </span>
+                        {% elif status == 'error' %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-exclamation-circle"></i> Error
+                            </span>
+                        {% elif status == 'paused' %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-pause-circle"></i> Paused
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ status.title() }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-comment"></i> Request
+                    </h6>
+                    <p class="card-text">
+                        {{ workflow.prompt[:100] }}{% if workflow.prompt|length > 100 %}...{% endif %}
+                    </p>
+                    
+                    {% if workflow.stage %}
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Stage:</strong> {{ workflow.stage }}
+                        </small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if workflow.message %}
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-message"></i>
+                            <strong>Status:</strong> {{ workflow.message[:80] }}{% if workflow.message|length > 80 %}...{% endif %}
+                        </small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if workflow.result and workflow.result.pr_url %}
+                    <div class="mt-3">
+                        <a href="{{ workflow.result.pr_url }}" target="_blank" class="btn btn-success btn-sm">
+                            <i class="fab fa-github"></i> View PR
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            {% if workflow.completed_at %}
+                                Completed: {{ workflow.completed_at[:19] }}
+                            {% elif workflow.started_at %}
+                                Started: {{ workflow.started_at[:19] }}
+                            {% else %}
+                                Created: {{ workflow.created_at[:19] if workflow.created_at else 'Unknown' }}
+                            {% endif %}
+                        </small>
+                        <a href="{{ url_for('workflow_detail', workflow_id=workflow.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No workflows yet</h4>
+        <p class="text-muted">Submit your first infrastructure request to get started.</p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create First Request
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

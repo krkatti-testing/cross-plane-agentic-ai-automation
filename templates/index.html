@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Crossplane Agentic Automation{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-cloud text-primary"></i>
+                Crossplane Agentic Automation
+            </h1>
+            <p class="lead text-muted">
+                Transform natural language requests into production-ready infrastructure configurations
+            </p>
+        </div>
+
+        <!-- Configuration Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog"></i> System Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row config-status">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-robot me-2"></i>
+                            <span>OpenAI API:</span>
+                            <span class="ms-auto">
+                                {% if config.openai_configured %}
+                                    <span class="badge bg-success">✓ Configured</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✗ Not Set</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fab fa-github me-2"></i>
+                            <span>GitHub API:</span>
+                            <span class="ms-auto">
+                                {% if config.github_configured %}
+                                    <span class="badge bg-success">✓ Configured</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✗ Not Set</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if config.repo_owner and config.repo_name %}
+                <div class="mt-2 pt-2 border-top">
+                    <small class="text-muted">
+                        <i class="fas fa-repository"></i>
+                        Target Repository: <strong>{{ config.repo_owner }}/{{ config.repo_name }}</strong>
+                    </small>
+                </div>
+                {% endif %}
+                
+                {% if not config.openai_configured or not config.github_configured %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Configuration Required:</strong>
+                    Please set the required environment variables before submitting requests.
+                    <details class="mt-2">
+                        <summary>Setup Instructions</summary>
+                        <pre class="mt-2 mb-0"><code>export OPENAI_API_KEY="your-openai-api-key"
+export GITHUB_TOKEN="your-github-token"
+export GITHUB_REPO_OWNER="your-github-username"
+export GITHUB_REPO_NAME="your-repo-name"</code></pre>
+                    </details>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-keyboard"></i> Infrastructure Request
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="requestForm">
+                    <div class="mb-3">
+                        <label for="prompt" class="form-label">
+                            <i class="fas fa-comment"></i> Describe your infrastructure needs:
+                        </label>
+                        <textarea 
+                            class="form-control prompt-textarea" 
+                            id="prompt" 
+                            name="prompt" 
+                            placeholder="Example: Create an EKS cluster named prod-cluster in us-west-2 with 5 nodes and Kubernetes version 1.28"
+                            required
+                        ></textarea>
+                        <div class="form-text">
+                            Describe what infrastructure you need in natural language. 
+                            The AI will parse your request and generate the appropriate Crossplane configurations.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button 
+                            type="submit" 
+                            class="btn btn-primary btn-lg"
+                            {% if not config.openai_configured or not config.github_configured %}disabled{% endif %}
+                        >
+                            <i class="fas fa-magic"></i> Create Infrastructure
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Workflow Results Section -->
+        <div id="workflowResults" class="mt-4" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i> Workflow Status
+                        <span id="workflowStatusBadge" class="badge bg-secondary ms-2">Processing</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Status Information -->
+                    <div id="statusInfo" class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <span id="statusIndicator" class="stage-indicator stage-queued"></span>
+                            <span id="statusIcon"><i class="fas fa-clock"></i></span>
+                            <span class="ms-2"><strong>Stage:</strong> <span id="currentStage">Queued</span></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Message:</strong> <span id="statusMessage">Workflow queued for processing</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Results Section (shown when completed) -->
+                    <div id="resultsSection" style="display: none;">
+                        <!-- Success Alert with PR Link -->
+                        <div id="successAlert" class="alert alert-success" style="display: none;">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Infrastructure Created Successfully!</h6>
+                                    <p class="mb-0">Your pull request has been created and is ready for review.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <a id="prLink" href="#" target="_blank" class="btn btn-success me-2">
+                                    <i class="fab fa-github"></i> View Pull Request
+                                </a>
+                                <a id="workflowDetailsLink" href="#" class="btn btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Files Created -->
+                        <div id="filesSection" style="display: none;">
+                            <h6><i class="fas fa-file-code"></i> Generated Files:</h6>
+                            <ul id="filesList" class="list-group list-group-flush mb-3">
+                                <!-- Files will be populated here -->
+                            </ul>
+                        </div>
+
+                        <!-- Parsed Configuration -->
+                        <div id="configSection" style="display: none;">
+                            <h6><i class="fas fa-cog"></i> Configuration Details:</h6>
+                            <div id="configDetails" class="bg-light p-3 rounded">
+                                <!-- Configuration details will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Section -->
+                    <div id="errorSection" class="alert alert-danger" style="display: none;">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Error Occurred</h6>
+                        <p id="errorMessage">An error occurred during processing.</p>
+                        <details>
+                            <summary>Error Details</summary>
+                            <pre id="errorDetails" class="mt-2 mb-0"></pre>
+                        </details>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-end mt-3">
+                        <button id="dismissBtn" class="btn btn-outline-secondary btn-sm" onclick="hideResults()">
+                            <i class="fas fa-times"></i> Dismiss
+                        </button>
+                        <button id="newRequestBtn" class="btn btn-primary btn-sm" onclick="startNewRequest()">
+                            <i class="fas fa-plus"></i> New Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Examples -->
+        <div class="mt-4">
+            <h5 class="mb-3">
+                <i class="fas fa-lightbulb"></i> Quick Examples
+            </h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card example-card h-100" onclick="fillExample(this)">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fab fa-aws text-warning"></i> EKS Cluster
+                            </h6>
+                            <p class="card-text small text-muted">
+                                "Create an EKS cluster named prod-cluster in us-west-2 with 5 nodes"
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card example-card h-100" onclick="fillExample(this)">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-database text-info"></i> S3 Bucket
+                            </h6>
+                            <p class="card-text small text-muted">
+                                "Create an S3 bucket named data-lake with versioning and encryption enabled"
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('examples') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-eye"></i> View More Examples
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentWorkflowId = null;
+let statusInterval = null;
+
+function fillExample(element) {
+    const text = element.querySelector('.card-text').textContent.trim();
+    // Remove quotes from the example text
+    const cleanText = text.replace(/^"/, '').replace(/"$/, '');
+    document.getElementById('prompt').value = cleanText;
+    document.getElementById('prompt').focus();
+}
+
+function updateWorkflowStatus(data) {
+    // Show the results section
+    document.getElementById('workflowResults').style.display = 'block';
+    
+    // Update status badge
+    const statusBadge = document.getElementById('workflowStatusBadge');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusIcon = document.getElementById('statusIcon');
+    const currentStage = document.getElementById('currentStage');
+    const statusMessage = document.getElementById('statusMessage');
+    const progressBar = document.getElementById('progressBar');
+    
+    // Update status elements
+    let badgeClass = 'bg-secondary';
+    let stageClass = 'stage-' + data.status;
+    let iconHtml = '<i class="fas fa-clock"></i>';
+    let progress = 20;
+    
+    switch(data.status) {
+        case 'queued':
+            badgeClass = 'bg-secondary';
+            iconHtml = '<i class="fas fa-clock"></i>';
+            progress = 10;
+            break;
+        case 'running':
+            badgeClass = 'bg-warning';
+            iconHtml = '<i class="fas fa-spinner fa-spin"></i>';
+            progress = 50;
+            break;
+        case 'completed':
+            badgeClass = 'bg-success';
+            iconHtml = '<i class="fas fa-check-circle"></i>';
+            progress = 100;
+            break;
+        case 'error':
+            badgeClass = 'bg-danger';
+            iconHtml = '<i class="fas fa-exclamation-circle"></i>';
+            progress = 100;
+            break;
+        case 'paused':
+            badgeClass = 'bg-warning';
+            iconHtml = '<i class="fas fa-pause-circle"></i>';
+            progress = 30;
+            break;
+    }
+    
+    statusBadge.className = `badge ms-2 ${badgeClass}`;
+    statusBadge.textContent = data.status.toUpperCase();
+    statusIndicator.className = `stage-indicator ${stageClass}`;
+    statusIcon.innerHTML = iconHtml;
+    currentStage.textContent = data.stage || 'Unknown';
+    statusMessage.textContent = data.message || 'Processing...';
+    progressBar.style.width = progress + '%';
+    
+    // Handle completion
+    if (data.status === 'completed' && data.result) {
+        document.getElementById('resultsSection').style.display = 'block';
+        progressBar.classList.remove('progress-bar-animated');
+        
+        // Show success alert with PR link
+        if (data.result.pr_url) {
+            const successAlert = document.getElementById('successAlert');
+            const prLink = document.getElementById('prLink');
+            const workflowDetailsLink = document.getElementById('workflowDetailsLink');
+            
+            successAlert.style.display = 'block';
+            prLink.href = data.result.pr_url;
+            workflowDetailsLink.href = '/workflow/' + currentWorkflowId;
+        }
+        
+        // Show files created
+        if (data.result.files && data.result.files.length > 0) {
+            const filesSection = document.getElementById('filesSection');
+            const filesList = document.getElementById('filesList');
+            
+            filesSection.style.display = 'block';
+            filesList.innerHTML = '';
+            
+            data.result.files.forEach(file => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex align-items-center';
+                li.innerHTML = `
+                    <i class="fas fa-file-code text-primary me-2"></i>
+                    <code>${file}</code>
+                `;
+                filesList.appendChild(li);
+            });
+        }
+        
+        // Show configuration details
+        if (data.result.request) {
+            const configSection = document.getElementById('configSection');
+            const configDetails = document.getElementById('configDetails');
+            
+            configSection.style.display = 'block';
+            
+            let configHtml = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Resource Type:</strong> ${data.result.request.resource_type}<br>
+                        <strong>Name:</strong> ${data.result.request.name}<br>
+                        <strong>Region:</strong> ${data.result.request.region}<br>
+                        <strong>Environment:</strong> ${data.result.request.environment}
+                    </div>
+                    <div class="col-md-6">
+            `;
+            
+            if (data.result.request.node_count) {
+                configHtml += `<strong>Node Count:</strong> ${data.result.request.node_count}<br>`;
+            }
+            if (data.result.request.kubernetes_version) {
+                configHtml += `<strong>Kubernetes Version:</strong> ${data.result.request.kubernetes_version}<br>`;
+            }
+            if (data.result.request.versioning !== null && data.result.request.versioning !== undefined) {
+                configHtml += `<strong>Versioning:</strong> ${data.result.request.versioning ? 'Enabled' : 'Disabled'}<br>`;
+            }
+            if (data.result.request.encryption !== null && data.result.request.encryption !== undefined) {
+                configHtml += `<strong>Encryption:</strong> ${data.result.request.encryption ? 'Enabled' : 'Disabled'}<br>`;
+            }
+            
+            configHtml += `</div></div>`;
+            configDetails.innerHTML = configHtml;
+        }
+        
+        // Stop polling
+        if (statusInterval) {
+            clearInterval(statusInterval);
+            statusInterval = null;
+        }
+    }
+    
+    // Handle errors
+    if (data.status === 'error') {
+        document.getElementById('errorSection').style.display = 'block';
+        document.getElementById('errorMessage').textContent = data.message || 'An error occurred during processing.';
+        
+        if (data.error) {
+            document.getElementById('errorDetails').textContent = data.error;
+        }
+        
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-danger');
+        
+        // Stop polling
+        if (statusInterval) {
+            clearInterval(statusInterval);
+            statusInterval = null;
+        }
+    }
+}
+
+function pollWorkflowStatus() {
+    if (!currentWorkflowId) return;
+    
+    fetch('/status/' + currentWorkflowId)
+        .then(response => response.json())
+        .then(data => {
+            updateWorkflowStatus(data);
+        })
+        .catch(error => {
+            console.error('Error polling status:', error);
+        });
+}
+
+document.getElementById('requestForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    fetch('/submit', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-magic"></i> Create Infrastructure';
+            return;
+        }
+        
+        // Store workflow ID and start inline status tracking
+        currentWorkflowId = data.workflow_id;
+        
+        // Show initial status
+        updateWorkflowStatus({
+            status: 'queued',
+            stage: 'queued',
+            message: 'Workflow queued for processing'
+        });
+        
+        // Start polling for status updates
+        statusInterval = setInterval(pollWorkflowStatus, 2000);
+        pollWorkflowStatus(); // Initial call
+        
+        // Scroll to results section
+        document.getElementById('workflowResults').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+        
+        // Reset form
+        this.reset();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-magic"></i> Create Infrastructure';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-magic"></i> Create Infrastructure';
+    });
+});
+
+// Helper functions for result actions
+function hideResults() {
+    document.getElementById('workflowResults').style.display = 'none';
+    if (statusInterval) {
+        clearInterval(statusInterval);
+        statusInterval = null;
+    }
+    currentWorkflowId = null;
+}
+
+function startNewRequest() {
+    hideResults();
+    document.getElementById('prompt').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+{% endblock %}
